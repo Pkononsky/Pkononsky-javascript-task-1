@@ -125,11 +125,7 @@ function getNameForChangeData(requestPart, beginIndex) {
 function changeData(data, func, name) {
     for (let d of data) {
         let spData = d.split(' ');
-        if (spData[0] === 'phones') {
-            func(name, spData[0], formatPhoneNumber(spData[1]));
-        } else {
-            func(name, spData[0], spData[1]);
-        }
+        func(name, spData[0], spData[1]);
     }
 }
 
@@ -209,6 +205,9 @@ function addNameIfQuery(name, query, result) {
 
 function getAllNamesWithQuery(query) {
     let result = {};
+    if (query === '') {
+        return result;
+    }
     for (let name of phoneBook.keys()) {
         addNameIfQuery(name, query, result);
     }
@@ -247,14 +246,19 @@ function getNamesForFindData(requestPart, beginIndex) {
 
 function addFindData(d, result, name) {
     if (d === 'имя') {
-        result[name] += name + ';';
+        result[name] += name;
     }
     if (d === 'телефоны') {
-        result[name] += phoneBook.get(name).phones.join(',') + ';';
+        let phones = [];
+        for (let phone of phoneBook.get(name).phones) {
+            phones.push(formatPhoneNumber(phone));
+        }
+        result[name] += phones.join(',');
     }
     if (d === 'почты') {
-        result[name] += phoneBook.get(name).emails.join(',') + ';';
+        result[name] += phoneBook.get(name).emails.join(',');
     }
+    result[name] += ';';
 }
 
 function findData(names, data) {

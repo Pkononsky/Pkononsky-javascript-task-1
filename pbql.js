@@ -23,7 +23,6 @@ function syntaxError(lineNumber, charNumber) {
 function run(query) {
     requestCounter = 0;
     let result = [];
-
     let splittedQuery = query.split(';');
     for (let request of splittedQuery.slice(0, splittedQuery.length - 1)) {
         requestCounter++;
@@ -160,7 +159,8 @@ function resolveRequestChangeData(request, command, func) {
         } else if (request.slice(spaceIndex, secondSpaceIndex + 1).includes('почту ')) {
             beginIndex = getNextDataAndIndex(request, data, secondSpaceIndex, 'почту ');
         } else {
-            syntaxError(requestCounter, command.length + 2);
+            let charNumber = beginIndex + request.slice(beginIndex, spaceIndex).length + 2;
+            syntaxError(requestCounter, charNumber);
         }
         spaceIndex = request.indexOf(' ', beginIndex + 1);
     }
@@ -191,28 +191,6 @@ function resolveQueryDeleteData(request) {
     }
 }
 
-
-function findData(requestPart, result, name, beginIndex) {
-    if (['Покажи', 'и'].includes(requestPart[0])) {
-        switch (requestPart[1]) {
-            case ('имя'):
-                result[name] += name + ';';
-                break;
-            case ('телефоны'):
-                result[name] += phoneBook.get(name).phones.join(',') + ';';
-                break;
-            case ('почты'):
-                result[name] += phoneBook.get(name).emails.join(',') + ';';
-                break;
-            default:
-                syntaxError(requestCounter, beginIndex + 2 + requestPart[0].length);
-                break;
-        }
-    } else {
-        syntaxError(requestCounter, beginIndex + 2);
-    }
-}
-
 function getAllNamesWithQuery(query) {
     let result = {};
     for (let name of phoneBook.keys()) {
@@ -224,27 +202,84 @@ function getAllNamesWithQuery(query) {
     return result;
 }
 
-function resolveQueryFindData(request) {
-    let queryStart = request.indexOf(', где есть') + ', где есть '.length;
-    if (request.slice(0, queryStart + 1).includes('  ')) {
-        syntaxError(requestCounter, request.indexOf('  ') + 2);
-    }
-    let result = getAllNamesWithQuery(request.slice(queryStart, request.length));
-    let beginIndex = 0;
-    let endIndex = request.indexOf(' ', request.indexOf(' ') + 1) + 1;
-    let keys = Object.keys(result);
-    while (!request.slice(beginIndex, beginIndex + 3).includes('для')) {
-        for (let i = 0; i < keys.length; i++) {
-            let name = keys[i];
-            let requestPart = request.slice(beginIndex, endIndex).split(' ');
-            findData(requestPart, result, name, beginIndex);
+function getQueryForFindData(requestPart, query, beginIndex) {
+    if (requestPart.indexOf('где ') === 15) {
+        if (requestPart.indexOf('есть ') === 19) {
+            query = requestPart.slice('для контактов, где есть '.length);
+        } else {
+            syntaxError(requestCounter, beginIndex + 'для контактов, где '.length + 1);
         }
-        beginIndex = endIndex;
-        endIndex = request.indexOf(' ', request.indexOf(' ', endIndex) + 1) + 1;
+    } else {
+        syntaxError(requestCounter, beginIndex + 'для контактов, '.length + 1);
+    }
+
+    return query;
+}
+
+function getNamesForFindData(requestPart, beginIndex) {
+    let query = '';
+    if (requestPart.indexOf('для ') === 0) {
+        if (requestPart.indexOf('контактов, ') === 4) {
+            query = getQueryForFindData(requestPart, query, beginIndex);
+        } else {
+            syntaxError(requestCounter, beginIndex + 'для '.length + 1);
+        }
+    } else {
+        syntaxError(requestCounter, beginIndex + 1);
+    }
+
+    return getAllNamesWithQuery(query);
+}
+
+function addFindData(d, result, name) {
+    if (d === 'имя') {
+        result[name] += name + ';';
+    }
+    if (d === 'телефоны') {
+        result[name] += phoneBook.get(name).phones.join(',') + ';';
+    }
+    if (d === 'почты') {
+        result[name] += phoneBook.get(name).emails.join(',') + ';';
+    }
+}
+
+function findData(names, data) {
+    let result = {};
+    for (let name of Object.keys(names)) {
+        result[name] = '';
+        for (let d of data) {
+            addFindData(d, result, name);
+        }
     }
 
     return result;
 }
+
+function resolveQueryFindData(request) {
+    let beginIndex = 0;
+    let data = [];
+    let spaceIndex = request.indexOf(' ');
+    //  Покажи отдельно проверять
+    while (['Покажи', 'и'].includes(request.slice(beginIndex, spaceIndex))) {
+        let secondSpaceIndex = request.indexOf(' ', spaceIndex + 1);
+        if (request.slice(spaceIndex + 1, secondSpaceIndex + 1).includes('телефоны ')) {
+            data.push('телефоны');
+        } else if (request.slice(spaceIndex, secondSpaceIndex + 1).includes('почты ')) {
+            data.push('почты');
+        } else if (request.slice(spaceIndex, secondSpaceIndex + 1).includes('имя ')) {
+            data.push('имя');
+        } else {
+            let charNumber = beginIndex + request.slice(beginIndex, spaceIndex).length + 2;
+            syntaxError(requestCounter, charNumber);
+        }
+        beginIndex = secondSpaceIndex + 1;
+        spaceIndex = request.indexOf(' ', beginIndex + 1);
+    }
+    let names = getNamesForFindData(request.slice(beginIndex), beginIndex);
+
+    return findData(names, data);
+}
+
 
 function deleteContacts(request) {
     let query = '';

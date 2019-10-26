@@ -29,7 +29,7 @@ function run(query) {
         let someData = resolveRequest(request);
         let keys = Object.keys(someData);
         for (let i = 0; i < keys.length; i++) {
-            result = result.concat(someData[keys[i]].slice(0, someData[keys[i]].length - 1));
+            result = result.concat(someData[keys[i]].join(';'));
         }
     }
     if (query[query.length - 1] !== ';') {
@@ -246,25 +246,24 @@ function getNamesForFindData(requestPart, beginIndex) {
 
 function addFindData(d, result, name) {
     if (d === 'имя') {
-        result[name] += name;
+        result[name].push(name);
     }
     if (d === 'телефоны') {
         let phones = [];
         for (let phone of phoneBook.get(name).phones) {
             phones.push(formatPhoneNumber(phone));
         }
-        result[name] += phones.join(',');
+        result[name].push(phones.join(','));
     }
     if (d === 'почты') {
-        result[name] += phoneBook.get(name).emails.join(',');
+        result[name].push(phoneBook.get(name).emails.join(','));
     }
-    result[name] += ';';
 }
 
 function findData(names, data) {
     let result = {};
     for (let name of Object.keys(names)) {
-        result[name] = '';
+        result[name] = [];
         for (let d of data) {
             addFindData(d, result, name);
         }

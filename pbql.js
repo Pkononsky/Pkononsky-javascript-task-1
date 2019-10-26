@@ -23,19 +23,18 @@ function syntaxError(lineNumber, charNumber) {
 function run(query) {
     requestCounter = 0;
     let result = [];
-    if (query[query.length - 1] !== ';') {
-        syntaxError(1, query.length + 1);
-    }
 
     let splittedQuery = query.split(';');
-    splittedQuery.pop();
-    for (let request of splittedQuery) {
+    for (let request of splittedQuery.slice(0, splittedQuery.length - 1)) {
         requestCounter++;
         let someData = resolveRequest(request);
         let keys = Object.keys(someData);
         for (let i = 0; i < keys.length; i++) {
             result = result.concat(someData[keys[i]].slice(0, someData[keys[i]].length - 1));
         }
+    }
+    if (query[query.length - 1] !== ';') {
+        syntaxError(requestCounter + 1, splittedQuery[requestCounter].length + 1);
     }
 
     return result;
@@ -53,7 +52,7 @@ function resolveRequest(request) {
             resolveQueryDeleteData(request);
             break;
         case ('Добавь') :
-            resolveRequestChangeData(request, addContactData);
+            resolveRequestChangeData(request, 'Добавь', addContactData);
             break;
         case ('Покажи') :
             someData = resolveQueryFindData(request);
@@ -109,38 +108,64 @@ function formatPhoneNumber(phone) {
     return res;
 }
 
-function changeData(requestPart, func, name, beginIndex) {
-    if (requestPart[1] === 'телефон') {
-        if (requestPart[2].search(/\d{10}/) === -1) {
-            syntaxError(requestCounter, beginIndex + requestPart[1].length + 1);
+function getNameForChangeData(requestPart, beginIndex) {
+    let name = '';
+    if (requestPart.indexOf('для ') === 0) {
+        if (requestPart.indexOf('контакта ') === 4) {
+            name = requestPart.slice('для контакта '.length);
+        } else {
+            syntaxError(requestCounter, beginIndex + 'для '.length + 1);
         }
-        func(name, 'phones', formatPhoneNumber(requestPart[2]));
-    } else if (requestPart[1] === 'почту') {
-        if (requestPart[2].search(/\w+@\w+\.\w+/) === -1) {
-            syntaxError(requestCounter, beginIndex + requestPart[1].length + 1);
-        }
-        func(name, 'emails', requestPart[2]);
     } else {
-        syntaxError(requestCounter, beginIndex);
+        syntaxError(requestCounter, beginIndex + 1);
+    }
+
+    return name;
+}
+
+function changeData(data, func, name) {
+    for (let d of data) {
+        let spData = d.split(' ');
+        if (spData[0] === 'phones') {
+            func(name, spData[0], formatPhoneNumber(spData[1]));
+        } else {
+            func(name, spData[0], spData[1]);
+        }
     }
 }
 
-function resolveRequestChangeData(request, func) {
-    let nameStart = request.indexOf('для контакта ') + 'для контакта '.length;
-    let name = request.slice(nameStart);
-    let beginIndex = 0;
-    let endIndex = request.indexOf(' ', request.indexOf(' ', request.indexOf(' ') + 1) + 1) + 1;
-    while (!request.slice(beginIndex, beginIndex + 13).includes('для контакта')) {
-        let requestPart = request.slice(beginIndex, endIndex).split(' ');
-        if (['Добавь', 'Удали', 'и'].includes(requestPart[0])) {
-            changeData(requestPart, func, name, beginIndex + requestPart[0].length + 2);
-        } else {
-            syntaxError(requestCounter, beginIndex + 1);
-        }
-        beginIndex = endIndex;
-        let secondSpaceIndex = request.indexOf(' ', request.indexOf(' ', endIndex) + 1);
-        endIndex = request.indexOf(' ', secondSpaceIndex + 1) + 1;
+function getNextDataAndIndex(request, data, secondSpaceIndex, dataType) {
+    let dataTypeEng = dataType === 'телефон ' ? 'phones' : 'emails';
+    let regex = dataType === 'телефон ' ? /\d{10}/ : /\w+@\w+\.\w+/;
+    let thirdSpaceIndex = request.indexOf(' ', secondSpaceIndex + 1);
+    let dataToChange = request.slice(secondSpaceIndex + 1, thirdSpaceIndex);
+    if (dataToChange.search(regex) !== -1) {
+        data.push(`${dataTypeEng} ${dataToChange}`);
+    } else {
+        syntaxError(requestCounter, secondSpaceIndex + 2);
     }
+
+    return thirdSpaceIndex + 1;
+}
+
+function resolveRequestChangeData(request, command, func) {
+    let beginIndex = 0;
+    let data = [];
+    let spaceIndex = request.indexOf(' ');
+    while ([command, 'и'].includes(request.slice(beginIndex, spaceIndex))) {
+        let secondSpaceIndex = request.indexOf(' ', spaceIndex + 1);
+        let commandLength = command.length + 1;
+        if (request.slice(spaceIndex + 1, secondSpaceIndex + 1).includes('телефон ')) {
+            beginIndex = getNextDataAndIndex(request, data, secondSpaceIndex, 'телефон ');
+        } else if (request.slice(spaceIndex, secondSpaceIndex + 1).includes('почту ')) {
+            beginIndex = getNextDataAndIndex(request, data, secondSpaceIndex, 'почту ');
+        } else {
+            syntaxError(requestCounter, commandLength + 1);
+        }
+        spaceIndex = request.indexOf(' ', beginIndex + 1);
+    }
+    let name = getNameForChangeData(request.slice(beginIndex), beginIndex);
+    changeData(data, func, name);
 }
 
 function resolveQueryDeleteData(request) {
@@ -152,10 +177,10 @@ function resolveQueryDeleteData(request) {
             deleteContact(name);
             break;
         case ('телефон') :
-            resolveRequestChangeData(request, deleteContactData);
+            resolveRequestChangeData(request, 'Удали', deleteContactData);
             break;
         case ('почту') :
-            resolveRequestChangeData(request, deleteContactData);
+            resolveRequestChangeData(request, 'Удали', deleteContactData);
             break;
         case ('контакты,') :
             deleteContacts(request);
@@ -163,7 +188,6 @@ function resolveQueryDeleteData(request) {
         default:
             syntaxError(requestCounter, 'Удали '.length + 1);
             break;
-
     }
 }
 
@@ -183,7 +207,6 @@ function findData(requestPart, result, name, beginIndex) {
             default:
                 syntaxError(requestCounter, beginIndex + 2 + requestPart[0].length);
                 break;
-
         }
     } else {
         syntaxError(requestCounter, beginIndex + 2);

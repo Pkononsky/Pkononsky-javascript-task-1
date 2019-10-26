@@ -258,9 +258,6 @@ function addFindData(d, result, name) {
     if (d === 'почты') {
         result[name].push(phoneBook.get(name).emails.join(','));
     }
-    if (result[name].indexOf('', result[name].indexOf('') + 1) !== -1) {
-        result[name].pop();
-    }
 }
 
 function findData(names, data) {

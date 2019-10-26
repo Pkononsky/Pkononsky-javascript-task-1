@@ -135,7 +135,7 @@ function changeData(data, func, name) {
 
 function getNextDataAndIndex(request, data, secondSpaceIndex, dataType) {
     let dataTypeEng = dataType === 'телефон ' ? 'phones' : 'emails';
-    let regex = dataType === 'телефон ' ? /\d{10}/ : /\w+@\w+\.\w+/;
+    let regex = dataType === 'телефон ' ? /\d{10}/ : /(\w|[а-яА-ЯЁё])+/;
     let thirdSpaceIndex = request.indexOf(' ', secondSpaceIndex + 1);
     let dataToChange = request.slice(secondSpaceIndex + 1, thirdSpaceIndex);
     if (dataToChange.search(regex) !== -1) {
@@ -299,6 +299,7 @@ function deleteContacts(request) {
         deleteContact(name);
     }
 }
+
 
 module.exports = { phoneBook, run };
 

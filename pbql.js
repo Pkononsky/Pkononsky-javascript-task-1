@@ -192,16 +192,16 @@ function resolveQueryDeleteData(request) {
 }
 
 function addNameIfQuery(name, query, result) {
-    if (name.indexOf(query) !== -1) {
+    if (name.includes(query)) {
         result[name] = '';
     }
     for (let phone of phoneBook.get(name).phones) {
-        if (phone.includes(query) !== -1) {
+        if (phone.includes(query)) {
             result[name] = '';
         }
     }
     for (let email of phoneBook.get(name).emails) {
-        if (email.includes(query) !== -1) {
+        if (email.includes(query)) {
             result[name] = '';
         }
     }
@@ -313,7 +313,6 @@ function deleteContacts(request) {
         deleteContact(name);
     }
 }
-
 
 module.exports = { phoneBook, run };
 

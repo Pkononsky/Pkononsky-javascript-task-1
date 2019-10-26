@@ -152,15 +152,15 @@ function resolveRequestChangeData(request, command, func) {
     let beginIndex = 0;
     let data = [];
     let spaceIndex = request.indexOf(' ');
+    //  command отдельно проверять
     while ([command, 'и'].includes(request.slice(beginIndex, spaceIndex))) {
         let secondSpaceIndex = request.indexOf(' ', spaceIndex + 1);
-        let commandLength = command.length + 1;
         if (request.slice(spaceIndex + 1, secondSpaceIndex + 1).includes('телефон ')) {
             beginIndex = getNextDataAndIndex(request, data, secondSpaceIndex, 'телефон ');
         } else if (request.slice(spaceIndex, secondSpaceIndex + 1).includes('почту ')) {
             beginIndex = getNextDataAndIndex(request, data, secondSpaceIndex, 'почту ');
         } else {
-            syntaxError(requestCounter, commandLength + 1);
+            syntaxError(requestCounter, command.length + 2);
         }
         spaceIndex = request.indexOf(' ', beginIndex + 1);
     }
@@ -247,8 +247,16 @@ function resolveQueryFindData(request) {
 }
 
 function deleteContacts(request) {
-    let queryStart = request.indexOf('есть') + 'есть '.length;
-    let query = request.slice(queryStart, request.length);
+    let query = '';
+    if (request.slice('Удали контакты, '.length).includes('где ')) {
+        if (request.slice('Удали контакты, где '.length).includes('есть ')) {
+            query = request.slice('Удали контакты, где есть '.length);
+        } else {
+            syntaxError(requestCounter, 'Удали контакты, где '.length + 1);
+        }
+    } else {
+        syntaxError(requestCounter, 'Удали контакты, '.length + 1);
+    }
     let names = getAllNamesWithQuery(query);
     let keys = Object.keys(names);
     for (let i = 0; i < keys.length; i++) {

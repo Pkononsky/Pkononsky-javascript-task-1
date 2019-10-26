@@ -205,7 +205,7 @@ function addNameIfQuery(name, query, result) {
 
 function getAllNamesWithQuery(query) {
     let result = {};
-    if (query === '') {
+    if (query === '' || query === ' ') {
         return result;
     }
     for (let name of phoneBook.keys()) {
@@ -297,7 +297,6 @@ function resolveQueryFindData(request) {
     return findData(names, data);
 }
 
-
 function deleteContacts(request) {
     let query = '';
     if (request.slice('Удали контакты, '.length).includes('где ')) {
@@ -318,4 +317,3 @@ function deleteContacts(request) {
 }
 
 module.exports = { phoneBook, run };
-

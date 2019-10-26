@@ -29,7 +29,10 @@ function run(query) {
         let someData = resolveRequest(request);
         let keys = Object.keys(someData);
         for (let i = 0; i < keys.length; i++) {
-            result = result.concat(someData[keys[i]].join(';'));
+            // eslint-disable-next-line max-depth
+            if (someData[keys[i]].join(';') !== '') {
+                result = result.concat(someData[keys[i]].join(';'));
+            }
         }
     }
     if (query[query.length - 1] !== ';') {
@@ -205,11 +208,16 @@ function addNameIfQuery(name, query, result) {
 
 function getAllNamesWithQuery(query) {
     let result = {};
-    if (query === '' || query === ' ') {
+    if (query === '') {
         return result;
     }
     for (let name of phoneBook.keys()) {
         addNameIfQuery(name, query, result);
+    }
+    if (Object.keys(result).length === 0) {
+        result[''] = '';
+
+        return result;
     }
 
     return result;
@@ -244,19 +252,27 @@ function getNamesForFindData(requestPart, beginIndex) {
     return getAllNamesWithQuery(query);
 }
 
+// eslint-disable-next-line complexity
 function addFindData(d, result, name) {
     if (d === 'имя') {
         result[name].push(name);
     }
     if (d === 'телефоны') {
         let phones = [];
-        for (let phone of phoneBook.get(name).phones) {
-            phones.push(formatPhoneNumber(phone));
+        if (phoneBook.has(name)) {
+            // eslint-disable-next-line max-depth
+            for (let phone of phoneBook.get(name).phones) {
+                phones.push(formatPhoneNumber(phone));
+            }
         }
         result[name].push(phones.join(','));
     }
     if (d === 'почты') {
-        result[name].push(phoneBook.get(name).emails.join(','));
+        let emails = '';
+        if (phoneBook.has(name)) {
+            emails = phoneBook.get(name).emails.join(',');
+        }
+        result[name].push(emails);
     }
 }
 
@@ -276,7 +292,6 @@ function resolveQueryFindData(request) {
     let beginIndex = 0;
     let data = [];
     let spaceIndex = request.indexOf(' ');
-    //  Покажи отдельно проверять
     while (['Покажи', 'и'].includes(request.slice(beginIndex, spaceIndex))) {
         let secondSpaceIndex = request.indexOf(' ', spaceIndex + 1);
         if (request.slice(spaceIndex + 1, secondSpaceIndex + 1).includes('телефоны ')) {

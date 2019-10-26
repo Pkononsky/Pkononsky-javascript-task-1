@@ -29,10 +29,7 @@ function run(query) {
         let someData = resolveRequest(request);
         let keys = Object.keys(someData);
         for (let i = 0; i < keys.length; i++) {
-            // eslint-disable-next-line max-depth
-            if (someData[keys[i]].join(';') !== '') {
-                result = result.concat(someData[keys[i]].join(';'));
-            }
+            result = result.concat(someData[keys[i]].join(';'));
         }
     }
     if (query[query.length - 1] !== ';') {
@@ -137,6 +134,9 @@ function getNextDataAndIndex(request, data, secondSpaceIndex, dataType) {
     let regex = dataType === 'телефон ' ? /\d{10}/ : /(\w|[а-яА-ЯЁё])+/;
     let thirdSpaceIndex = request.indexOf(' ', secondSpaceIndex + 1);
     let dataToChange = request.slice(secondSpaceIndex + 1, thirdSpaceIndex);
+    if (dataType === 'телефон ' && dataToChange.length !== 10) {
+        syntaxError(requestCounter, secondSpaceIndex + 2);
+    }
     if (dataToChange.search(regex) !== -1) {
         data.push(`${dataTypeEng} ${dataToChange}`);
     } else {
@@ -214,11 +214,6 @@ function getAllNamesWithQuery(query) {
     for (let name of phoneBook.keys()) {
         addNameIfQuery(name, query, result);
     }
-    if (Object.keys(result).length === 0) {
-        result[''] = '';
-
-        return result;
-    }
 
     return result;
 }
@@ -252,27 +247,19 @@ function getNamesForFindData(requestPart, beginIndex) {
     return getAllNamesWithQuery(query);
 }
 
-// eslint-disable-next-line complexity
 function addFindData(d, result, name) {
     if (d === 'имя') {
         result[name].push(name);
     }
     if (d === 'телефоны') {
         let phones = [];
-        if (phoneBook.has(name)) {
-            // eslint-disable-next-line max-depth
-            for (let phone of phoneBook.get(name).phones) {
-                phones.push(formatPhoneNumber(phone));
-            }
+        for (let phone of phoneBook.get(name).phones) {
+            phones.push(formatPhoneNumber(phone));
         }
         result[name].push(phones.join(','));
     }
     if (d === 'почты') {
-        let emails = '';
-        if (phoneBook.has(name)) {
-            emails = phoneBook.get(name).emails.join(',');
-        }
-        result[name].push(emails);
+        result[name].push(phoneBook.get(name).emails.join(','));
     }
 }
 
@@ -292,6 +279,7 @@ function resolveQueryFindData(request) {
     let beginIndex = 0;
     let data = [];
     let spaceIndex = request.indexOf(' ');
+    //  Покажи отдельно проверять
     while (['Покажи', 'и'].includes(request.slice(beginIndex, spaceIndex))) {
         let secondSpaceIndex = request.indexOf(' ', spaceIndex + 1);
         if (request.slice(spaceIndex + 1, secondSpaceIndex + 1).includes('телефоны ')) {
